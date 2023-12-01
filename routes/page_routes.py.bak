@@ -1,0 +1,351 @@
+from flask import Blueprint, render_template, abort, session, redirect, url_for, request
+from functools import wraps
+from lib.Users import Users
+from lib.Mail import Mail
+
+from nav import navigation_bar
+import requests
+import json
+
+def requires_auth(f):
+	@wraps(f)
+	def decorated_auth(*args, **kwargs):
+		if "username" in session:
+			user = users.getUserInfo()
+			session["group"] = user["group"]
+		else:
+			return redirect(url_for('page_routes.login'))
+		return f(*args, **kwargs)
+	return decorated_auth
+
+def requires_admin(f):
+	@wraps(f)
+	def decoracted_admin(*args, **kwargs):
+		if not users.isAdmin():
+			return redirect(url_for('page_routes.index'))
+		return f(*args, **kwargs)
+	return decoracted_admin
+
+users = Users()
+mail = Mail()
+
+page_routes = Blueprint('page_routes', __name__, template_folder='templates')
+
+@page_routes.before_request
+def before_request():
+	if 'username' in session:
+		users.updateLastseen()
+	pass
+
+
+#Main routes
+@page_routes.route('/')
+@requires_auth
+def index():
+	notification = {}
+	if "notification" in session:
+		notification = {
+			"message": session["notification"],
+			"type": session["notificationtype"]
+		}
+		session.pop("notification")
+		session.pop("notificationtype")
+	return render_template(
+		'index.html',
+		title="Dashboard",
+		notification=notification,
+		navigation_bar=navigation_bar
+		)
+        
+#Main routes
+@page_routes.route('/threat_monitoring', methods=['GET', 'POST'])
+@requires_auth
+def virustotal():
+    if request.method == 'POST':
+        url = request.form.get('url')
+        # Call the VirusTotal API with the provided URL (url)
+        # Replace the following line with the actual API call logic
+        api_result = call_virustotal_api(url)
+
+        # Process the API result as needed
+        notification = {
+            "message": "API call successful",
+            "type": "success"
+        }
+
+        return render_template(
+            'virustotal.html',
+            title="Virus Total",
+            notification=notification,
+            navigation_bar=navigation_bar,
+            api_result=api_result
+        )
+
+    # For GET request
+    notification = {}
+    if "notification" in session:
+        notification = {
+            "message": session["notification"],
+            "type": session["notificationtype"]
+        }
+        session.pop("notification")
+        session.pop("notificationtype")
+    return render_template(
+        'virustotal.html',
+        title="Virus Total",
+        notification=notification,
+        navigation_bar=navigation_bar
+    )
+    
+@page_routes.route('/urlscan', methods=['GET', 'POST'])
+@requires_auth
+def urlscan():
+    if request.method == 'POST':
+        url = request.form.get('url')
+        # Call the VirusTotal API with the provided URL (url)
+        # Replace the following line with the actual API call logic
+        api_result = call_urlscan_api(url)
+
+        # Process the API result as needed
+        notification = {
+            "message": "API call successful",
+            "type": "success"
+        }
+
+        return render_template(
+            'urlscan.html',
+            title="Urlscan",
+            notification=notification,
+            navigation_bar=navigation_bar,
+            api_result=api_result
+        )
+
+    # For GET request
+    notification = {}
+    if "notification" in session:
+        notification = {
+            "message": session["notification"],
+            "type": session["notificationtype"]
+        }
+        session.pop("notification")
+        session.pop("notificationtype")
+    return render_template(
+        'urlscan.html',
+        title="Urlscan",
+        notification=notification,
+        navigation_bar=navigation_bar
+    )
+
+@page_routes.route('/otx', methods=['GET', 'POST'])
+@requires_auth
+def otx():
+    if request.method == 'POST':
+        url = request.form.get('url')
+        # Call the VirusTotal API with the provided URL (url)
+        # Replace the following line with the actual API call logic
+        api_result = call_otx_api(url)
+
+        # Process the API result as needed
+        notification = {
+            "message": "API call successful",
+            "type": "success"
+        }
+
+        return render_template(
+            'otx.html',
+            title="Otx",
+            notification=notification,
+            navigation_bar=navigation_bar,
+            api_result=api_result
+        )
+
+    # For GET request
+    notification = {}
+    if "notification" in session:
+        notification = {
+            "message": session["notification"],
+            "type": session["notificationtype"]
+        }
+        session.pop("notification")
+        session.pop("notificationtype")
+    return render_template(
+        'otx.html',
+        title="Otx",
+        notification=notification,
+        navigation_bar=navigation_bar
+    )
+    
+@page_routes.route('/safe', methods=['GET', 'POST'])
+@requires_auth
+def safe():
+    if request.method == 'POST':
+        url = request.form.get('url')
+        # Call the VirusTotal API with the provided URL (url)
+        # Replace the following line with the actual API call logic
+        api_result = call_safe_api(url)
+
+        # Process the API result as needed
+        notification = {
+            "message": "API call successful",
+            "type": "success"
+        }
+
+        return render_template(
+            'safe.html',
+            title="Safe Browsing",
+            notification=notification,
+            navigation_bar=navigation_bar,
+            api_result=api_result
+        )
+
+    # For GET request
+    notification = {}
+    if "notification" in session:
+        notification = {
+            "message": session["notification"],
+            "type": session["notificationtype"]
+        }
+        session.pop("notification")
+        session.pop("notificationtype")
+    return render_template(
+        'safe.html',
+        title="Safe Browsing",
+        notification=notification,
+        navigation_bar=navigation_bar
+    )
+    
+@page_routes.route('/login', methods=["GET","POST"])
+def login():
+	notification = {}
+	if "notification" in session:
+		notification = {
+			"message": session["notification"],
+			"type": session["notificationtype"]
+		}
+		session.pop("notification")
+		session.pop("notificationtype")
+	if 'username' in session:
+		return redirect(url_for('page_routes.index'))
+	if request.method == "POST":
+		res = users.loginUser(request.form)
+		if not res:
+			return redirect(url_for('page_routes.index'))
+	return render_template(
+		'login.html',
+		title='Login',
+		notification=notification,
+		navigation_bar=navigation_bar
+		),401
+
+@page_routes.route('/logout')
+@requires_auth
+def logout():
+	users.logoutUser()
+	return redirect(url_for('page_routes.login'))
+
+@page_routes.route('/admin')
+@requires_auth
+@requires_admin
+def admin():
+	notification = {}
+	if "notification" in session:
+		notification = {
+			"message": session["notification"],
+			"type": session["notificationtype"]
+		}
+		session.pop("notification")
+		session.pop("notificationtype")
+	return render_template(
+		'admin.html',
+		title="Admin page",
+		navigation_bar=navigation_bar
+		)
+        
+def call_virustotal_api(url):
+    apiUrl = "https://www.virustotal.com/vtapi/v2/url/scan"
+
+    headers = {
+        "accept": "application/json",
+        "Content-Type": "application/x-www-form-urlencoded",
+    }
+    
+    data= {'apikey': "bfec375818d1545c2f9dc2384ecd9663a4a93965685df958eecb7ede8615627b", 'url': url}
+
+    response = requests.post(apiUrl, headers=headers, data=data)
+
+    print(response.text)
+    formatted_json = json.dumps(response.json(), indent=4)
+    return formatted_json
+    
+def call_urlscan_api(url):
+    print(url)
+    headers = {'API-Key':'bf73236c-9684-407a-8228-7017051b0352','Content-Type':'application/json'}
+    data = {"url": url, "visibility": "public"}
+    response = requests.post('https://urlscan.io/api/v1/scan/',headers=headers, data=json.dumps(data))
+    formatted_json = json.dumps(response.json(), indent=4)
+    return formatted_json
+    
+def call_otx_api(url):
+    section="general"
+    url = f'https://otx.alienvault.com/api/v1/indicators/hostname/{url}/{section}'
+    headers = {'X-OTX-API-KEY': '1b47c77be4fa37431dacf54bafde1b122b9b41847b1713dc1d58417cadc371d7'}
+    response = requests.get(url,headers=headers)
+    print(response.json())
+    formatted_json = json.dumps(response.json(), indent=4)
+    return formatted_json
+    
+def call_safe_api(url):
+    print(url)
+    # Replace 'YOUR_API_KEY' with your actual Safe Browsing API key
+    api_key = 'AIzaSyDrBpVCvgzAkaCcevkrngaCzzrU0Xfcdp0'
+
+    # Safe Browsing API endpoint
+    apiUrl = f'https://safebrowsing.googleapis.com/v4/threatMatches:find?key={api_key}'
+
+    # Request headers
+    headers = {
+        'Content-Type': 'application/json',
+    }
+
+    # Request body
+    data = {
+        "client": {
+            "clientId": "Ideation",
+            "clientVersion": "1.5.2"
+        },
+        "threatInfo": {
+            "threatTypes": ["MALWARE", "SOCIAL_ENGINEERING"],
+            "platformTypes": ["WINDOWS"],
+            "threatEntryTypes": ["URL"],
+            "threatEntries": [
+                {"url": url} 
+            ]
+        }
+    }
+
+    # Convert the data to JSON format
+    json_data = json.dumps(data)
+
+    # Make the POST request
+    response = requests.post(url, headers=headers, data=json_data)
+
+    # Print the response details
+    print("Response Status Code:", response.status_code)
+    print("Response Content Type:", response.headers.get('content-type'))
+    print("Response Content Length:", len(response.content))
+
+    # Print the entire content of the response
+    print("Response Content:")
+    print(response.content.decode('utf-8'))
+
+    # Check the response
+    if response.status_code == 200:
+        print("Request successful:")
+        print(response.json())
+        
+    else:
+        print(f"Request failed with status code {response.status_code}:")
+        print(response.text)
+        
+    #formatted_json = json.dumps(response.json(), indent=4)
+    return response.content.decode('utf-8')

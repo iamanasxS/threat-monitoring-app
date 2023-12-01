@@ -1,0 +1,31 @@
+{% extends 'layout.html' %} 
+{% block body %}
+<section class="content">
+	<div class="container">
+		<div class="row">
+			<div class="col-md-6 col-md-offset-3 loginform">
+				<h2>Google Safe Browsing server to check URL status (safe or unsafe)</h2>
+				<p>
+				Malware Url : http://malware.testing.google.test/testing/malware/
+				</p>
+				<form action="{{ url_for('page_routes.safe') }}" method="POST">
+					<div class="input-group">
+                        <span class="input-group-addon" id="uname"><i class="fa fa-file"></i></span>
+                        <input type="text" class="form-control" name="url" id="url" placeholder="" autofocus>
+                    </div>
+                    <br>
+                    <br>
+                    <input type="submit" value="Submit" class="btn btn-default btn-sm">
+				</form>
+				<div>
+                    {% if api_result %}
+                        <p>
+                            {{ api_result | safe }}
+                        </p> 
+                    {% endif %}
+                </div>
+			</div>
+		</div>
+	</div>
+</section>
+{% endblock %}
